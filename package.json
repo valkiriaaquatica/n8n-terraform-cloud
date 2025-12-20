@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-terraform-cloud",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "Terraform Cloud nodes for n8n (workspaces, runs, state, wait)",
 	"license": "MIT",
 	"homepage": "https://github.com/valkiriaaquatica/n8n-terraform-cloud",
@@ -11,9 +11,9 @@
 		"tfe",
 		"hashicorp"
 	],
-    "author": {
-        "name": "Fernando Mendieta Ovejero"
-    },
+	"author": {
+		"name": "Fernando Mendieta Ovejero"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/valkiriaaquatica/n8n-terraform-cloud.git"
