@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.1...v1.0.2) (2025-12-20)
+
+
+### Bug Fixes
+
+* ci checkout actin ([f838265](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/f838265f21cb047f331a7800ae34c272c3b16351))
+
 ## [1.0.1](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.0...v1.0.1) (2025-12-20)
 
 
