@@ -35,7 +35,6 @@ You will need an api token credential to interact with Terraform Cloud.
 ![alt text](image-3.png)
 
 2) TerraformCloud node → Resource `Run` → Operation `Get Status` → use the `runId` from step 1.  
-(Place your screenshot of the n8n flow here.)
 ![alt text](image-4.png)
 
 ### Fetch workspace tf state
