@@ -1,3 +1,4 @@
 dist
 node_modules
 n8n-nodes-my-app/
+docker-test/

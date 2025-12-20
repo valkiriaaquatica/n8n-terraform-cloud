@@ -12,7 +12,8 @@
 		"hashicorp"
 	],
 	"author": {
-		"name": "Fernando Mendieta Ovejero"
+		"name": "Fernando Mendieta Ovejero",
+		"email" : "fernandomendietaovejero@gmail.com"
 	},
 	"repository": {
 		"type": "git",
