@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.2...v1.0.3) (2025-12-20)
+
+
+### Bug Fixes
+
+* delete unnecesary coments ([f60f4b1](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/f60f4b1e316e3747b8b177f0c05cfa0ec25abac5))
+
 ## [1.0.2](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.1...v1.0.2) (2025-12-20)
 
 
