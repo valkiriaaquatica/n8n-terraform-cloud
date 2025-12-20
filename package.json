@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-terraform-cloud",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Terraform Cloud nodes for n8n (workspaces, runs, state, wait)",
 	"license": "MIT",
 	"homepage": "https://github.com/valkiriaaquatica/n8n-terraform-cloud",
