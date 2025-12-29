@@ -15,6 +15,7 @@ Custom n8n nodes to work with HashiCorp Terraform Cloud: manage runs, workspaces
 - List runs per workspace or fetch the status of a specific run.
 
 ### Workspaces
+- Create workspaces with vcs, variables, executions, directories...
 - List workspaces in an organization.
 - Fetch workspace details (includes current/latest run).
 - Fetch the current workspace state (state version + download URL).
@@ -24,6 +25,19 @@ Custom n8n nodes to work with HashiCorp Terraform Cloud: manage runs, workspaces
 
 ## Credentials
 You will need an api token credential to interact with Terraform Cloud.
+
+### Credentials for creating Workspace with VCS from Github App
+
+To create a workspace whose VCS source is a **GitHub App**, you must use a **User API Token**.  
+An **Organization API Token is not sufficient** for this purpose.
+
+#### How to create a User API Token
+
+1. Click on your profile picture in the upper-right corner.
+2. Go to **Account Settings**.
+3. Navigate to **Tokens**.
+4. Click **Create API Token**.
+
 
 ## Example flows
 

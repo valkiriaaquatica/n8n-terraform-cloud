@@ -12,6 +12,8 @@ import {
 import { workspaceDescription } from './resources/workspace';
 import { runDescription } from './resources/run';
 import { projectDescription } from './resources/project';
+import { variableDescription } from './resources/variable';
+import { githubAppInstallationDescription } from './resources/githubAppInstallation';
 
 type FullResponse = {
     statusCode?: number;
@@ -66,12 +68,22 @@ export class TerraformCloud implements INodeType {
                         name: 'Project',
                         value: 'project',
                     },
+                    {
+                        name: 'Variable',
+                        value: 'variable',
+                    },
+                    {
+                        name: 'GitHub App Installation',
+                        value: 'githubAppInstallation',
+                    },
                 ],
                 default: 'workspace',
             },
             ...workspaceDescription,
             ...runDescription,
             ...projectDescription,
+            ...variableDescription,
+            ...githubAppInstallationDescription,
         ],
     };
 
@@ -106,6 +118,14 @@ export class TerraformCloud implements INodeType {
             const statusCode = response?.statusCode ?? response?.status ?? 202;
             const responseBody = response && typeof response === 'object' && 'body' in response ? response.body ?? null : null;
             return { statusCode, responseBody };
+        };
+
+        const extractErrorDetails = (error: unknown) => {
+            const errorObject = error as IDataObject;
+            const response = (errorObject?.response as IDataObject) || (errorObject?.cause as IDataObject)?.response;
+            const body = response?.body as IDataObject | undefined;
+            const errors = (body?.errors as IDataObject[] | undefined) || undefined;
+            return { response, body, errors };
         };
 
         for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
@@ -358,7 +378,7 @@ export class TerraformCloud implements INodeType {
 
                     if (operation === 'list') {
                         const organization = this.getNodeParameter('organization', itemIndex) as string;
-                        const options = this.getNodeParameter('options', itemIndex, {}) as IDataObject;
+                        const options = this.getNodeParameter('listOptions', itemIndex, {}) as IDataObject;
                         const qs: IDataObject = {};
                         if (options.pageNumber) qs['page[number]'] = options.pageNumber;
                         if (options.pageSize) qs['page[size]'] = options.pageSize;
@@ -381,6 +401,295 @@ export class TerraformCloud implements INodeType {
                             qs: { include: 'current_run,latest_run' },
                         });
                         returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    if (operation === 'create') {
+                        const organization = this.getNodeParameter('organization', itemIndex) as string;
+                        const name = this.getNodeParameter('name', itemIndex) as string;
+                        const options = this.getNodeParameter('workspaceOptions', itemIndex, {}) as IDataObject;
+
+                        if (!name) {
+                            throw new NodeOperationError(this.getNode(), 'Workspace name is required', { itemIndex });
+                        }
+
+                        const attributes: IDataObject = {
+                            name,
+                        };
+
+                        if (options.description) attributes.description = options.description;
+                        if (options.autoApply !== undefined) attributes['auto-apply'] = options.autoApply;
+                        if (options.terraformVersion) attributes['terraform-version'] = options.terraformVersion;
+                        if (options.workingDirectory) attributes['working-directory'] = options.workingDirectory;
+                        if (options.executionMode) attributes['execution-mode'] = options.executionMode;
+
+                        if (options.tagNames) {
+                            const tagNames = String(options.tagNames)
+                                .split(',')
+                                .map((tag) => tag.trim())
+                                .filter(Boolean);
+                            if (tagNames.length) attributes['tag-names'] = tagNames;
+                        }
+
+                        const relationships: IDataObject = {};
+                        if (options.projectId) {
+                            relationships.project = {
+                                data: {
+                                    type: 'projects',
+                                    id: options.projectId,
+                                },
+                            };
+                        }
+
+                        if (options.vcsRepo && typeof options.vcsRepo === 'object') {
+                            const vcsRepo = options.vcsRepo as IDataObject;
+                            const identifier = (vcsRepo.identifier as string) || '';
+                            const oauthTokenId = (vcsRepo.oauthTokenId as string) || '';
+                            const githubAppInstallationId = (vcsRepo.githubAppInstallationId as string) || '';
+                            const authType = (vcsRepo.authType as string) || '';
+
+                            const wantsVcsConfig =
+                                identifier ||
+                                oauthTokenId ||
+                                githubAppInstallationId ||
+                                vcsRepo.branch ||
+                                vcsRepo.defaultBranch;
+
+                            if (wantsVcsConfig) {
+                                if (!identifier) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'VCS repo identifier is required when configuring VCS settings',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                const usingOauth = authType === 'oauth' || (!authType && !!oauthTokenId);
+                                const usingGithubApp =
+                                    authType === 'githubApp' || (!authType && !!githubAppInstallationId);
+
+                                if (usingOauth && usingGithubApp) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'Choose either OAuth token ID or GitHub App installation ID, not both',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                if (usingOauth && !oauthTokenId) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'OAuth token ID is required when auth type is OAuth',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                if (usingGithubApp && !githubAppInstallationId) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'GitHub App installation ID is required when auth type is GitHub App',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                const vcsPayload: IDataObject = {
+                                    identifier,
+                                    ...(vcsRepo.branch ? { branch: vcsRepo.branch } : {}),
+                                    ...(vcsRepo.defaultBranch ? { 'default-branch': vcsRepo.defaultBranch } : {}),
+                                    ...(vcsRepo.ingressSubmodules !== undefined
+                                        ? { 'ingress-submodules': vcsRepo.ingressSubmodules }
+                                        : {}),
+                                };
+
+                                if (usingOauth) {
+                                    vcsPayload['oauth-token-id'] = oauthTokenId;
+                                } else if (usingGithubApp) {
+                                    vcsPayload['github-app-installation-id'] = githubAppInstallationId;
+                                }
+
+                                attributes['vcs-repo'] = vcsPayload;
+                            }
+                        }
+
+                        if (attributes['execution-mode'] === 'agent') {
+                            const agentPoolId = (options.agentPoolId as string) || '';
+                            if (!agentPoolId) {
+                                throw new NodeOperationError(
+                                    this.getNode(),
+                                    'Agent pool ID is required when execution mode is agent',
+                                    { itemIndex },
+                                );
+                            }
+                            attributes['agent-pool-id'] = agentPoolId;
+                        }
+
+                        const executionData = await request({
+                            method: 'POST',
+                            url: `${baseUrl}/organizations/${organization}/workspaces`,
+                            body: {
+                                data: {
+                                    type: 'workspaces',
+                                    attributes,
+                                    ...(Object.keys(relationships).length ? { relationships } : {}),
+                                },
+                            },
+                        });
+                        returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    if (operation === 'update') {
+                        const workspaceId = this.getNodeParameter('workspaceId', itemIndex) as string;
+                        const options = this.getNodeParameter('workspaceOptions', itemIndex, {}) as IDataObject;
+                        const updateName = this.getNodeParameter('updateName', itemIndex, '') as string;
+
+                        const attributes: IDataObject = {};
+                        if (updateName) attributes.name = updateName;
+                        if (options.description) attributes.description = options.description;
+                        if (options.autoApply !== undefined) attributes['auto-apply'] = options.autoApply;
+                        if (options.terraformVersion) attributes['terraform-version'] = options.terraformVersion;
+                        if (options.workingDirectory) attributes['working-directory'] = options.workingDirectory;
+                        if (options.executionMode) attributes['execution-mode'] = options.executionMode;
+
+                        if (options.tagNames) {
+                            const tagNames = String(options.tagNames)
+                                .split(',')
+                                .map((tag) => tag.trim())
+                                .filter(Boolean);
+                            if (tagNames.length) attributes['tag-names'] = tagNames;
+                        }
+
+                        const relationships: IDataObject = {};
+                        if (options.projectId) {
+                            relationships.project = {
+                                data: {
+                                    type: 'projects',
+                                    id: options.projectId,
+                                },
+                            };
+                        }
+
+                        if (options.vcsRepo && typeof options.vcsRepo === 'object') {
+                            const vcsRepo = options.vcsRepo as IDataObject;
+                            const identifier = (vcsRepo.identifier as string) || '';
+                            const oauthTokenId = (vcsRepo.oauthTokenId as string) || '';
+                            const githubAppInstallationId = (vcsRepo.githubAppInstallationId as string) || '';
+                            const authType = (vcsRepo.authType as string) || '';
+
+                            const wantsVcsConfig =
+                                identifier ||
+                                oauthTokenId ||
+                                githubAppInstallationId ||
+                                vcsRepo.branch ||
+                                vcsRepo.defaultBranch;
+
+                            if (wantsVcsConfig) {
+                                if (!identifier) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'VCS repo identifier is required when configuring VCS settings',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                const usingOauth = authType === 'oauth' || (!authType && !!oauthTokenId);
+                                const usingGithubApp =
+                                    authType === 'githubApp' || (!authType && !!githubAppInstallationId);
+
+                                if (usingOauth && usingGithubApp) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'Choose either OAuth token ID or GitHub App installation ID, not both',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                if (usingOauth && !oauthTokenId) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'OAuth token ID is required when auth type is OAuth',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                if (usingGithubApp && !githubAppInstallationId) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        'GitHub App installation ID is required when auth type is GitHub App',
+                                        { itemIndex },
+                                    );
+                                }
+
+                                const vcsPayload: IDataObject = {
+                                    identifier,
+                                    ...(vcsRepo.branch ? { branch: vcsRepo.branch } : {}),
+                                    ...(vcsRepo.defaultBranch ? { 'default-branch': vcsRepo.defaultBranch } : {}),
+                                    ...(vcsRepo.ingressSubmodules !== undefined
+                                        ? { 'ingress-submodules': vcsRepo.ingressSubmodules }
+                                        : {}),
+                                };
+
+                                if (usingOauth) {
+                                    vcsPayload['oauth-token-id'] = oauthTokenId;
+                                } else if (usingGithubApp) {
+                                    vcsPayload['github-app-installation-id'] = githubAppInstallationId;
+                                }
+
+                                attributes['vcs-repo'] = vcsPayload;
+                            }
+                        }
+
+                        if (attributes['execution-mode'] === 'agent') {
+                            const agentPoolId = (options.agentPoolId as string) || '';
+                            if (!agentPoolId) {
+                                throw new NodeOperationError(
+                                    this.getNode(),
+                                    'Agent pool ID is required when execution mode is agent',
+                                    { itemIndex },
+                                );
+                            }
+                            attributes['agent-pool-id'] = agentPoolId;
+                        }
+
+                        if (!Object.keys(attributes).length && !options.projectId) {
+                            throw new NodeOperationError(this.getNode(), 'No workspace updates were provided', {
+                                itemIndex,
+                            });
+                        }
+
+                        const executionData = await request({
+                            method: 'PATCH',
+                            url: `${baseUrl}/workspaces/${workspaceId}`,
+                            body: {
+                                data: {
+                                    id: workspaceId,
+                                    type: 'workspaces',
+                                    ...(Object.keys(attributes).length ? { attributes } : {}),
+                                    ...(Object.keys(relationships).length ? { relationships } : {}),
+                                },
+                            },
+                        });
+                        returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    if (operation === 'delete') {
+                        const workspaceId = this.getNodeParameter('workspaceId', itemIndex) as string;
+                        const response = await request({
+                            method: 'DELETE',
+                            url: `${baseUrl}/workspaces/${workspaceId}`,
+                            fullResponse: true,
+                        });
+
+                        const { statusCode, responseBody } = normalizeResponse(response as FullResponse);
+                        returnData.push({
+                            json: {
+                                workspaceId,
+                                action: 'delete',
+                                statusCode,
+                                response: responseBody,
+                            },
+                        });
                         continue;
                     }
 
@@ -408,11 +717,141 @@ export class TerraformCloud implements INodeType {
                     throw new NodeOperationError(this.getNode(), `Unsupported project operation: ${operation}`, { itemIndex });
                 }
 
+                if (resource === 'githubAppInstallation') {
+                    if (operation === 'list') {
+                        const organization = this.getNodeParameter('organization', itemIndex) as string;
+                        const options = this.getNodeParameter('options', itemIndex, {}) as IDataObject;
+                        const qs: IDataObject = {};
+                        if (options.pageNumber) qs['page[number]'] = options.pageNumber;
+                        if (options.pageSize) qs['page[size]'] = options.pageSize;
+
+                        const executionData = await request({
+                            method: 'GET',
+                            url: `${baseUrl}/organizations/${organization}/github-app-installations`,
+                            qs,
+                        });
+                        returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    throw new NodeOperationError(this.getNode(), `Unsupported GitHub App installation operation: ${operation}`, {
+                        itemIndex,
+                    });
+                }
+
+                if (resource === 'variable') {
+                    if (operation === 'create') {
+                        const workspaceId = this.getNodeParameter('workspaceId', itemIndex) as string;
+                        const key = this.getNodeParameter('key', itemIndex) as string;
+                        const value = this.getNodeParameter('value', itemIndex) as string;
+                        const category = this.getNodeParameter('category', itemIndex) as string;
+                        const sensitive = this.getNodeParameter('sensitive', itemIndex) as boolean;
+                        const hcl = this.getNodeParameter('hcl', itemIndex) as boolean;
+                        const description = this.getNodeParameter('description', itemIndex, '') as string;
+
+                        const executionData = await request({
+                            method: 'POST',
+                            url: `${baseUrl}/workspaces/${workspaceId}/vars`,
+                            body: {
+                                data: {
+                                    type: 'vars',
+                                    attributes: {
+                                        key,
+                                        value,
+                                        category,
+                                        sensitive,
+                                        hcl,
+                                        ...(description ? { description } : {}),
+                                    },
+                                },
+                            },
+                        });
+                        returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    if (operation === 'update') {
+                        const variableId = this.getNodeParameter('variableId', itemIndex) as string;
+                        const key = this.getNodeParameter('key', itemIndex) as string;
+                        const value = this.getNodeParameter('value', itemIndex) as string;
+                        const category = this.getNodeParameter('category', itemIndex) as string;
+                        const sensitive = this.getNodeParameter('sensitive', itemIndex) as boolean;
+                        const hcl = this.getNodeParameter('hcl', itemIndex) as boolean;
+                        const description = this.getNodeParameter('description', itemIndex, '') as string;
+
+                        const executionData = await request({
+                            method: 'PATCH',
+                            url: `${baseUrl}/vars/${variableId}`,
+                            body: {
+                                data: {
+                                    id: variableId,
+                                    type: 'vars',
+                                    attributes: {
+                                        key,
+                                        value,
+                                        category,
+                                        sensitive,
+                                        hcl,
+                                        ...(description ? { description } : {}),
+                                    },
+                                },
+                            },
+                        });
+                        returnData.push({ json: executionData as IDataObject });
+                        continue;
+                    }
+
+                    if (operation === 'delete') {
+                        const variableId = this.getNodeParameter('variableId', itemIndex) as string;
+                        const response = await request({
+                            method: 'DELETE',
+                            url: `${baseUrl}/vars/${variableId}`,
+                            fullResponse: true,
+                        });
+
+                        const { statusCode, responseBody } = normalizeResponse(response as FullResponse);
+                        returnData.push({
+                            json: {
+                                variableId,
+                                action: 'delete',
+                                statusCode,
+                                response: responseBody,
+                            },
+                        });
+                        continue;
+                    }
+
+                    throw new NodeOperationError(this.getNode(), `Unsupported variable operation: ${operation}`, { itemIndex });
+                }
+
                 throw new NodeOperationError(this.getNode(), `Unsupported resource: ${resource}`, { itemIndex });
             } catch (error) {
                 if (this.continueOnFail()) {
                     returnData.push({ json: { error: (error as Error).message }, pairedItem: itemIndex });
                     continue;
+                }
+
+                const { response, body, errors } = extractErrorDetails(error);
+                if (errors?.length) {
+                    const detail = errors
+                        .map((entry) => entry?.detail || entry?.title || entry?.status || JSON.stringify(entry))
+                        .filter(Boolean)
+                        .join('; ');
+                    throw new NodeOperationError(
+                        this.getNode(),
+                        `${(error as Error).message}${detail ? `: ${detail}` : ''}`,
+                        {
+                            itemIndex,
+                            description: body ? JSON.stringify(body) : undefined,
+                        },
+                    );
+                }
+
+                if (response?.body) {
+                    throw new NodeOperationError(this.getNode(), error as Error, {
+                        itemIndex,
+                        description: JSON.stringify(response.body),
+                    });
                 }
 
                 throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });

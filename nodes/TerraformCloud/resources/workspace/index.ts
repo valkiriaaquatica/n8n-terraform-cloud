@@ -27,6 +27,12 @@ export const workspaceDescription: INodeProperties[] = [
 				},
 			},
 			{
+				name: 'Create Workspace',
+				value: 'create',
+				action: 'Create a workspace',
+				description: 'Create a new workspace in an organization',
+			},
+			{
 				name: 'Get Workspace Details',
 				value: 'get',
 				action: 'Get workspace details',
@@ -47,6 +53,18 @@ export const workspaceDescription: INodeProperties[] = [
 				action: 'Get workspace state metadata',
 				description: 'Fetch the latest state version metadata (and download URL)',
 			},
+			{
+				name: 'Update Workspace',
+				value: 'update',
+				action: 'Update a workspace',
+				description: 'Update workspace settings by ID',
+			},
+			{
+				name: 'Delete Workspace',
+				value: 'delete',
+				action: 'Delete a workspace',
+				description: 'Delete a workspace by ID',
+			},
 		],
 		default: 'list',
 	},
@@ -60,7 +78,34 @@ export const workspaceDescription: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				...showOnlyForWorkspaces,
-				operation: ['list'],
+				operation: ['list', 'create'],
+			},
+		},
+	},
+	{
+		displayName: 'Name',
+		name: 'name',
+		type: 'string',
+		default: '',
+		required: true,
+		description: 'Workspace name (slug) to create',
+		displayOptions: {
+			show: {
+				...showOnlyForWorkspaces,
+				operation: ['create'],
+			},
+		},
+	},
+	{
+		displayName: 'Update Name',
+		name: 'updateName',
+		type: 'string',
+		default: '',
+		description: 'New workspace name (slug)',
+		displayOptions: {
+			show: {
+				...showOnlyForWorkspaces,
+				operation: ['update'],
 			},
 		},
 	},
@@ -74,7 +119,7 @@ export const workspaceDescription: INodeProperties[] = [
 		displayOptions: {
 			show: {
 				...showOnlyForWorkspaces,
-				operation: ['get', 'getState'],
+				operation: ['get', 'getState', 'update', 'delete'],
 			},
 			hide: {
 				resolveByName: [true],
@@ -126,7 +171,7 @@ export const workspaceDescription: INodeProperties[] = [
 	},
 	{
 		displayName: 'Options',
-		name: 'options',
+		name: 'listOptions',
 		type: 'collection',
 		placeholder: 'Add Option',
 		default: {},
@@ -185,6 +230,159 @@ export const workspaceDescription: INodeProperties[] = [
 						},
 					},
 				},
+			},
+		],
+	},
+	{
+		displayName: 'Options',
+		name: 'workspaceOptions',
+		type: 'collection',
+		placeholder: 'Add Option',
+		default: {},
+		displayOptions: {
+			show: {
+				...showOnlyForWorkspaces,
+				operation: ['create', 'update'],
+			},
+		},
+		options: [
+			{
+				displayName: 'Description',
+				name: 'description',
+				type: 'string',
+				default: '',
+				description: 'Workspace description',
+			},
+			{
+				displayName: 'Auto Apply',
+				name: 'autoApply',
+				type: 'boolean',
+				default: false,
+				description: 'Automatically apply successful plans',
+			},
+			{
+				displayName: 'Terraform Version',
+				name: 'terraformVersion',
+				type: 'string',
+				default: '',
+				description: 'Terraform version to use',
+			},
+			{
+				displayName: 'Working Directory',
+				name: 'workingDirectory',
+				type: 'string',
+				default: '',
+				description: 'Relative path to Terraform configuration',
+			},
+			{
+				displayName: 'Execution Mode',
+				name: 'executionMode',
+				type: 'options',
+				options: [
+					{
+						name: 'Remote',
+						value: 'remote',
+					},
+					{
+						name: 'Local',
+						value: 'local',
+					},
+					{
+						name: 'Agent',
+						value: 'agent',
+					},
+				],
+				default: 'remote',
+				description: 'How runs are executed',
+			},
+			{
+				displayName: 'Agent Pool ID',
+				name: 'agentPoolId',
+				type: 'string',
+				default: '',
+				description: 'Required when execution mode is agent',
+			},
+			{
+				displayName: 'Tag Names',
+				name: 'tagNames',
+				type: 'string',
+				default: '',
+				description: 'Comma-separated workspace tags',
+			},
+			{
+				displayName: 'Project ID',
+				name: 'projectId',
+				type: 'string',
+				default: '',
+				description: 'Project ID to attach the workspace to',
+			},
+			{
+				displayName: 'VCS Repo',
+				name: 'vcsRepo',
+				type: 'collection',
+				placeholder: 'Add VCS Repo',
+				default: {},
+				options: [
+					{
+						displayName: 'Auth Type',
+						name: 'authType',
+						type: 'options',
+						options: [
+							{
+								name: 'OAuth Token',
+								value: 'oauth',
+							},
+							{
+								name: 'GitHub App',
+								value: 'githubApp',
+							},
+						],
+						default: 'oauth',
+						description: 'Authentication type for the VCS connection',
+					},
+					{
+						displayName: 'Identifier',
+						name: 'identifier',
+						type: 'string',
+						default: '',
+						description: 'Repo identifier, e.g. org/repo',
+					},
+					{
+						displayName: 'OAuth Token ID',
+						name: 'oauthTokenId',
+						type: 'string',
+						default: '',
+						description: 'OAuth token ID for the VCS connection',
+					},
+					{
+						displayName: 'GitHub App Installation ID',
+						name: 'githubAppInstallationId',
+						type: 'string',
+						default: '',
+						description: 'GitHub App installation ID for the VCS connection',
+					},
+					{
+						displayName: 'Branch',
+						name: 'branch',
+						type: 'string',
+						default: '',
+						description: 'Branch to use',
+					},
+					{
+						displayName: 'Default Branch',
+						name: 'defaultBranch',
+						type: 'string',
+						default: '',
+						description: 'Default branch in the repo',
+					},
+					{
+						displayName: 'Ingress Submodules',
+						name: 'ingressSubmodules',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to ingress submodules',
+					},
+				],
 			},
 		],
 	},
