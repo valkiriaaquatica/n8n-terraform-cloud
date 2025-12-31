@@ -60,6 +60,9 @@ An **Organization API Token is not sufficient** for this purpose.
 1) TerraformCloud node → Resource `Run` → Operation `Discard a run`. 
 ![alt text](image.png)
 
+### Create a Workspace
+1) TerraformCloud node → Resource `Run` → Operation `Create a Workspace`.There are a multiple options on the creations: vcs control, auto apply, variables...
+![alt text](image-2.png)
 
 ## Requirements
 - Terraform Cloud API token with access to the target organization/workspaces.

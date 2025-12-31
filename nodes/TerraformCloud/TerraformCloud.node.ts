@@ -12,7 +12,6 @@ import {
 import { workspaceDescription } from './resources/workspace';
 import { runDescription } from './resources/run';
 import { projectDescription } from './resources/project';
-import { variableDescription } from './resources/variable';
 import { githubAppInstallationDescription } from './resources/githubAppInstallation';
 
 type FullResponse = {
@@ -69,10 +68,6 @@ export class TerraformCloud implements INodeType {
                         value: 'project',
                     },
                     {
-                        name: 'Variable',
-                        value: 'variable',
-                    },
-                    {
                         name: 'GitHub App Installation',
                         value: 'githubAppInstallation',
                     },
@@ -82,7 +77,6 @@ export class TerraformCloud implements INodeType {
             ...workspaceDescription,
             ...runDescription,
             ...projectDescription,
-            ...variableDescription,
             ...githubAppInstallationDescription,
         ],
     };
@@ -419,9 +413,22 @@ export class TerraformCloud implements INodeType {
 
                         if (options.description) attributes.description = options.description;
                         if (options.autoApply !== undefined) attributes['auto-apply'] = options.autoApply;
+                        if (options.autoApplyRunTrigger !== undefined) {
+                            attributes['auto-apply-run-trigger'] = options.autoApplyRunTrigger;
+                        }
                         if (options.terraformVersion) attributes['terraform-version'] = options.terraformVersion;
                         if (options.workingDirectory) attributes['working-directory'] = options.workingDirectory;
                         if (options.executionMode) attributes['execution-mode'] = options.executionMode;
+                        if (options.globalRemoteState !== undefined) {
+                            attributes['global-remote-state'] = options.globalRemoteState;
+                        }
+                        if (options.queueAllRuns !== undefined) attributes['queue-all-runs'] = options.queueAllRuns;
+                        if (options.speculativeEnabled !== undefined) {
+                            attributes['speculative-enabled'] = options.speculativeEnabled;
+                        }
+                        if (options.automaticRunTriggering) {
+                            attributes['file-triggers-enabled'] = options.automaticRunTriggering !== 'always';
+                        }
 
                         if (options.tagNames) {
                             const tagNames = String(options.tagNames)
@@ -429,6 +436,20 @@ export class TerraformCloud implements INodeType {
                                 .map((tag) => tag.trim())
                                 .filter(Boolean);
                             if (tagNames.length) attributes['tag-names'] = tagNames;
+                        }
+                        if (options.triggerPrefixes) {
+                            const triggerPrefixes = String(options.triggerPrefixes)
+                                .split(',')
+                                .map((prefix) => prefix.trim())
+                                .filter(Boolean);
+                            if (triggerPrefixes.length) attributes['trigger-prefixes'] = triggerPrefixes;
+                        }
+                        if (options.triggerPatterns) {
+                            const triggerPatterns = String(options.triggerPatterns)
+                                .split(',')
+                                .map((pattern) => pattern.trim())
+                                .filter(Boolean);
+                            if (triggerPatterns.length) attributes['trigger-patterns'] = triggerPatterns;
                         }
 
                         const relationships: IDataObject = {};
@@ -453,7 +474,9 @@ export class TerraformCloud implements INodeType {
                                 oauthTokenId ||
                                 githubAppInstallationId ||
                                 vcsRepo.branch ||
-                                vcsRepo.defaultBranch;
+                                vcsRepo.defaultBranch ||
+                                vcsRepo.tagsRegex ||
+                                vcsRepo.ingressSubmodules !== undefined;
 
                             if (wantsVcsConfig) {
                                 if (!identifier) {
@@ -499,6 +522,7 @@ export class TerraformCloud implements INodeType {
                                     ...(vcsRepo.ingressSubmodules !== undefined
                                         ? { 'ingress-submodules': vcsRepo.ingressSubmodules }
                                         : {}),
+                                    ...(vcsRepo.tagsRegex ? { 'tags-regex': vcsRepo.tagsRegex } : {}),
                                 };
 
                                 if (usingOauth) {
@@ -534,6 +558,68 @@ export class TerraformCloud implements INodeType {
                                 },
                             },
                         });
+                        const variablesInput = options.variables as IDataObject | undefined;
+                        const variableItems = (variablesInput?.variable as IDataObject[] | undefined) || [];
+                        if (variableItems.length) {
+                            const workspaceId = ((executionData as IDataObject)?.data as IDataObject | undefined)?.id as
+                                | string
+                                | undefined;
+                            if (!workspaceId) {
+                                throw new NodeOperationError(
+                                    this.getNode(),
+                                    'Workspace ID missing from create response; cannot create variables',
+                                    { itemIndex },
+                                );
+                            }
+
+                            const createdVariables: IDataObject[] = [];
+                            for (let varIndex = 0; varIndex < variableItems.length; varIndex++) {
+                                const variable = variableItems[varIndex] as IDataObject;
+                                const key = (variable.key as string) || '';
+                                const value = variable.value as string | undefined;
+                                const category = (variable.category as string) || 'terraform';
+                                const sensitive = (variable.sensitive as boolean) ?? false;
+                                const hcl = (variable.hcl as boolean) ?? false;
+                                const description = (variable.description as string) || '';
+
+                                if (!key) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        `Variable key is required (index ${varIndex})`,
+                                        { itemIndex },
+                                    );
+                                }
+                                if (value === undefined) {
+                                    throw new NodeOperationError(
+                                        this.getNode(),
+                                        `Variable value is required (index ${varIndex})`,
+                                        { itemIndex },
+                                    );
+                                }
+
+                                const variableResponse = await request({
+                                    method: 'POST',
+                                    url: `${baseUrl}/workspaces/${workspaceId}/vars`,
+                                    body: {
+                                        data: {
+                                            type: 'vars',
+                                            attributes: {
+                                                key,
+                                                value,
+                                                category,
+                                                sensitive,
+                                                hcl,
+                                                ...(description ? { description } : {}),
+                                            },
+                                        },
+                                    },
+                                });
+                                createdVariables.push(variableResponse as IDataObject);
+                            }
+
+                            (executionData as IDataObject).createdVariables = createdVariables;
+                        }
+
                         returnData.push({ json: executionData as IDataObject });
                         continue;
                     }
@@ -547,9 +633,22 @@ export class TerraformCloud implements INodeType {
                         if (updateName) attributes.name = updateName;
                         if (options.description) attributes.description = options.description;
                         if (options.autoApply !== undefined) attributes['auto-apply'] = options.autoApply;
+                        if (options.autoApplyRunTrigger !== undefined) {
+                            attributes['auto-apply-run-trigger'] = options.autoApplyRunTrigger;
+                        }
                         if (options.terraformVersion) attributes['terraform-version'] = options.terraformVersion;
                         if (options.workingDirectory) attributes['working-directory'] = options.workingDirectory;
                         if (options.executionMode) attributes['execution-mode'] = options.executionMode;
+                        if (options.globalRemoteState !== undefined) {
+                            attributes['global-remote-state'] = options.globalRemoteState;
+                        }
+                        if (options.queueAllRuns !== undefined) attributes['queue-all-runs'] = options.queueAllRuns;
+                        if (options.speculativeEnabled !== undefined) {
+                            attributes['speculative-enabled'] = options.speculativeEnabled;
+                        }
+                        if (options.automaticRunTriggering) {
+                            attributes['file-triggers-enabled'] = options.automaticRunTriggering !== 'always';
+                        }
 
                         if (options.tagNames) {
                             const tagNames = String(options.tagNames)
@@ -557,6 +656,20 @@ export class TerraformCloud implements INodeType {
                                 .map((tag) => tag.trim())
                                 .filter(Boolean);
                             if (tagNames.length) attributes['tag-names'] = tagNames;
+                        }
+                        if (options.triggerPrefixes) {
+                            const triggerPrefixes = String(options.triggerPrefixes)
+                                .split(',')
+                                .map((prefix) => prefix.trim())
+                                .filter(Boolean);
+                            if (triggerPrefixes.length) attributes['trigger-prefixes'] = triggerPrefixes;
+                        }
+                        if (options.triggerPatterns) {
+                            const triggerPatterns = String(options.triggerPatterns)
+                                .split(',')
+                                .map((pattern) => pattern.trim())
+                                .filter(Boolean);
+                            if (triggerPatterns.length) attributes['trigger-patterns'] = triggerPatterns;
                         }
 
                         const relationships: IDataObject = {};
@@ -581,7 +694,9 @@ export class TerraformCloud implements INodeType {
                                 oauthTokenId ||
                                 githubAppInstallationId ||
                                 vcsRepo.branch ||
-                                vcsRepo.defaultBranch;
+                                vcsRepo.defaultBranch ||
+                                vcsRepo.tagsRegex ||
+                                vcsRepo.ingressSubmodules !== undefined;
 
                             if (wantsVcsConfig) {
                                 if (!identifier) {
@@ -627,6 +742,7 @@ export class TerraformCloud implements INodeType {
                                     ...(vcsRepo.ingressSubmodules !== undefined
                                         ? { 'ingress-submodules': vcsRepo.ingressSubmodules }
                                         : {}),
+                                    ...(vcsRepo.tagsRegex ? { 'tags-regex': vcsRepo.tagsRegex } : {}),
                                 };
 
                                 if (usingOauth) {
@@ -737,91 +853,6 @@ export class TerraformCloud implements INodeType {
                     throw new NodeOperationError(this.getNode(), `Unsupported GitHub App installation operation: ${operation}`, {
                         itemIndex,
                     });
-                }
-
-                if (resource === 'variable') {
-                    if (operation === 'create') {
-                        const workspaceId = this.getNodeParameter('workspaceId', itemIndex) as string;
-                        const key = this.getNodeParameter('key', itemIndex) as string;
-                        const value = this.getNodeParameter('value', itemIndex) as string;
-                        const category = this.getNodeParameter('category', itemIndex) as string;
-                        const sensitive = this.getNodeParameter('sensitive', itemIndex) as boolean;
-                        const hcl = this.getNodeParameter('hcl', itemIndex) as boolean;
-                        const description = this.getNodeParameter('description', itemIndex, '') as string;
-
-                        const executionData = await request({
-                            method: 'POST',
-                            url: `${baseUrl}/workspaces/${workspaceId}/vars`,
-                            body: {
-                                data: {
-                                    type: 'vars',
-                                    attributes: {
-                                        key,
-                                        value,
-                                        category,
-                                        sensitive,
-                                        hcl,
-                                        ...(description ? { description } : {}),
-                                    },
-                                },
-                            },
-                        });
-                        returnData.push({ json: executionData as IDataObject });
-                        continue;
-                    }
-
-                    if (operation === 'update') {
-                        const variableId = this.getNodeParameter('variableId', itemIndex) as string;
-                        const key = this.getNodeParameter('key', itemIndex) as string;
-                        const value = this.getNodeParameter('value', itemIndex) as string;
-                        const category = this.getNodeParameter('category', itemIndex) as string;
-                        const sensitive = this.getNodeParameter('sensitive', itemIndex) as boolean;
-                        const hcl = this.getNodeParameter('hcl', itemIndex) as boolean;
-                        const description = this.getNodeParameter('description', itemIndex, '') as string;
-
-                        const executionData = await request({
-                            method: 'PATCH',
-                            url: `${baseUrl}/vars/${variableId}`,
-                            body: {
-                                data: {
-                                    id: variableId,
-                                    type: 'vars',
-                                    attributes: {
-                                        key,
-                                        value,
-                                        category,
-                                        sensitive,
-                                        hcl,
-                                        ...(description ? { description } : {}),
-                                    },
-                                },
-                            },
-                        });
-                        returnData.push({ json: executionData as IDataObject });
-                        continue;
-                    }
-
-                    if (operation === 'delete') {
-                        const variableId = this.getNodeParameter('variableId', itemIndex) as string;
-                        const response = await request({
-                            method: 'DELETE',
-                            url: `${baseUrl}/vars/${variableId}`,
-                            fullResponse: true,
-                        });
-
-                        const { statusCode, responseBody } = normalizeResponse(response as FullResponse);
-                        returnData.push({
-                            json: {
-                                variableId,
-                                action: 'delete',
-                                statusCode,
-                                response: responseBody,
-                            },
-                        });
-                        continue;
-                    }
-
-                    throw new NodeOperationError(this.getNode(), `Unsupported variable operation: ${operation}`, { itemIndex });
                 }
 
                 throw new NodeOperationError(this.getNode(), `Unsupported resource: ${resource}`, { itemIndex });
