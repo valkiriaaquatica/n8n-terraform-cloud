@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.3...v1.1.0) (2025-12-31)
+
+
+### Features
+
+* **actions:** add more options for iac ([#9](https://github.com/valkiriaaquatica/n8n-terraform-cloud/issues/9)) ([1081e30](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/1081e30577daf4607fdc8d076b5dc15256c79f46))
+* **actions:** new actions related to workspace creation, update and deletion ([b9e669e](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/b9e669e2275bdcee34758861bbda9fdfc22876ab))
+
 ## [1.0.3](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.2...v1.0.3) (2025-12-20)
 
 
