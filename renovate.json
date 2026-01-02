@@ -1,0 +1,13 @@
+{
+  "extends": ["config:recommended"],
+  "platformAutomerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true
+    }
+  ]
+}
