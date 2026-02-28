@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.1.0...v1.1.1) (2026-02-28)
+
+
+### Bug Fixes
+
+* **n8n:** correct lines for n8n publih package ([#32](https://github.com/valkiriaaquatica/n8n-terraform-cloud/issues/32)) ([de934c3](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/de934c368a5bb80539d0b208d3676add919a01d0))
+
 ## [1.1.0](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.0.3...v1.1.0) (2025-12-31)
 
 
