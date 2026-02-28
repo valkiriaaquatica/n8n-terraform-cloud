@@ -147,6 +147,7 @@ export class TerraformCloud implements INodeType {
                                 statusCode,
                                 response: responseBody,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -167,6 +168,7 @@ export class TerraformCloud implements INodeType {
                                 statusCode,
                                 response: responseBody,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -187,6 +189,7 @@ export class TerraformCloud implements INodeType {
                                 statusCode,
                                 response: responseBody,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -215,6 +218,7 @@ export class TerraformCloud implements INodeType {
                                 statusCode,
                                 response: responseBody,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -224,7 +228,7 @@ export class TerraformCloud implements INodeType {
                             method: 'GET',
                             url: `${baseUrl}/runs/${runId}`,
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -240,7 +244,7 @@ export class TerraformCloud implements INodeType {
                             url: `${baseUrl}/workspaces/${workspaceId}/runs`,
                             qs,
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -268,7 +272,7 @@ export class TerraformCloud implements INodeType {
                                 },
                             },
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -296,7 +300,7 @@ export class TerraformCloud implements INodeType {
                                 },
                             },
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -366,6 +370,7 @@ export class TerraformCloud implements INodeType {
                                 downloadUrl,
                                 stateVersion: stateVersionData,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -383,7 +388,7 @@ export class TerraformCloud implements INodeType {
                             url: `${baseUrl}/organizations/${organization}/workspaces`,
                             qs,
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -394,7 +399,7 @@ export class TerraformCloud implements INodeType {
                             url: `${baseUrl}/workspaces/${workspaceId}`,
                             qs: { include: 'current_run,latest_run' },
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -620,7 +625,7 @@ export class TerraformCloud implements INodeType {
                             (executionData as IDataObject).createdVariables = createdVariables;
                         }
 
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -785,7 +790,7 @@ export class TerraformCloud implements INodeType {
                                 },
                             },
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -805,6 +810,7 @@ export class TerraformCloud implements INodeType {
                                 statusCode,
                                 response: responseBody,
                             },
+                            pairedItem: itemIndex,
                         });
                         continue;
                     }
@@ -826,7 +832,7 @@ export class TerraformCloud implements INodeType {
                             url: `${baseUrl}/organizations/${organization}/projects`,
                             qs,
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
@@ -846,7 +852,7 @@ export class TerraformCloud implements INodeType {
                             url: `${baseUrl}/organizations/${organization}/github-app-installations`,
                             qs,
                         });
-                        returnData.push({ json: executionData as IDataObject });
+                        returnData.push({ json: executionData as IDataObject, pairedItem: itemIndex });
                         continue;
                     }
 
