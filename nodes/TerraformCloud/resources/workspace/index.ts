@@ -31,15 +31,6 @@ export const workspaceDescription: INodeProperties[] = [
 				value: 'get',
 				action: 'Get workspace details',
 				description: 'Fetch workspace info including VCS settings',
-				routing: {
-					request: {
-						method: 'GET',
-						url: '=/workspaces/{{$parameter.workspaceId}}',
-						qs: {
-							include: 'current_run,latest_run',
-						},
-					},
-				},
 			},
 			{
 				name: 'Get Workspace State',
@@ -52,12 +43,6 @@ export const workspaceDescription: INodeProperties[] = [
 				value: 'list',
 				action: 'List workspaces',
 				description: 'List workspaces in an organization',
-				routing: {
-					request: {
-						method: 'GET',
-						url: '=/organizations/{{$parameter.organization}}/workspaces',
-					},
-				},
 			},
 			{
 				name: 'Update Workspace',
@@ -191,13 +176,6 @@ export const workspaceDescription: INodeProperties[] = [
 					minValue: 1,
 				},
 				description: 'Page number to return',
-				routing: {
-					request: {
-						qs: {
-							'page[number]': '={{$value}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Page Size',
@@ -209,13 +187,6 @@ export const workspaceDescription: INodeProperties[] = [
 					maxValue: 100,
 				},
 				description: 'Number of results per page',
-				routing: {
-					request: {
-						qs: {
-							'page[size]': '={{$value}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Search',
@@ -223,13 +194,6 @@ export const workspaceDescription: INodeProperties[] = [
 				type: 'string',
 				default: '',
 				description: 'Search workspaces by name',
-				routing: {
-					request: {
-						qs: {
-							'search[generic]': '={{$value}}',
-						},
-					},
-				},
 			},
 		],
 	},

@@ -19,12 +19,6 @@ export const githubAppInstallationDescription: INodeProperties[] = [
 				value: 'list',
 				action: 'List github app installations',
 				description: 'List GitHub App installations for an organization',
-				routing: {
-					request: {
-						method: 'GET',
-						url: '=/organizations/{{$parameter.organization}}/github-app-installations',
-					},
-				},
 			},
 		],
 		default: 'list',
