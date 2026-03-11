@@ -41,13 +41,6 @@ export class TerraformCloud implements INodeType {
                 required: true,
             },
         ],
-        requestDefaults: {
-            baseURL: 'https://app.terraform.io/api/v2',
-            headers: {
-                Accept: 'application/vnd.api+json',
-                'Content-Type': 'application/vnd.api+json',
-            },
-        },
         properties: [
             {
                 displayName: 'Resource',
