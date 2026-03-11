@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.1.3...v1.1.4) (2026-03-11)
+
+
+### Bug Fixes
+
+* declarative style tf url ([#39](https://github.com/valkiriaaquatica/n8n-terraform-cloud/issues/39)) ([bb91717](https://github.com/valkiriaaquatica/n8n-terraform-cloud/commit/bb91717b8906b2f2849c52fd294afd69d19c7112))
+
 ## [1.1.3](https://github.com/valkiriaaquatica/n8n-terraform-cloud/compare/v1.1.2...v1.1.3) (2026-03-09)
 
 
